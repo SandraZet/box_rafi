@@ -771,14 +771,21 @@ function gameOver() {
   state.gameRunning = false;
   cancelAnimationFrame(state.frameId);
   stopMusic();
+  saveScore();
   document.getElementById('quit-btn').style.display = 'none';
   const overlay = document.getElementById('overlay');
+  const resultMsg = state.score >= 100 ? '🏆 Fantastisch!' : state.score >= 50 ? '👍 Gut gemacht!' : '💪 Weiter üben!';
   overlay.innerHTML = `
-    <div class="overlay-card">
+    <div class="overlay-card" style="max-width:520px">
       <h2>🎮 Spiel vorbei, ${state.playerName}!</h2>
-      <p>Dein Ergebnis: <strong style="color:#fbbf24;font-size:1.8rem">${state.score}</strong> Punkte</p>
-      <p>Alter: ${state.playerAge} | Level erreicht: ${state.level}</p>
-      <p style="font-size:1.3rem">${state.score >= 100 ? '🏆 Fantastisch!' : state.score >= 50 ? '👍 Gut gemacht!' : '💪 Weiter üben!'}</p>
+      <p>Dein Ergebnis: <strong style="color:#fbbf24;font-size:1.8rem">${state.score}</strong> Punkte &nbsp;|&nbsp; Level ${state.level}</p>
+      <p style="font-size:1.3rem">${resultMsg}</p>
+      <div style="width:100%;border-top:1px solid rgba(167,139,250,0.2);padding-top:10px">
+        <p style="color:#a78bfa;font-weight:bold;margin-bottom:8px">🏆 Bestenliste</p>
+        <div style="width:100%;max-height:220px;overflow-y:auto;border-radius:10px;border:1px solid rgba(167,139,250,0.2);background:rgba(0,0,0,0.2);padding:4px">
+          ${renderLeaderboardHTML()}
+        </div>
+      </div>
       <button id="startBtn" style="width:100%">Nochmal spielen 🔄</button>
     </div>
   `;
@@ -1021,7 +1028,10 @@ function showStartScreen() {
       <div class="char-picker" id="char-picker"></div>
 
       <p id="input-error" style="color:#f87171;font-size:0.9rem;min-height:18px;text-align:center"></p>
-      <button id="startBtn" style="width:100%">Spiel starten ▶</button>
+      <div style="display:flex;gap:10px;width:100%">
+        <button id="startBtn" style="flex:1">Spiel starten ▶</button>
+        <button onclick="showLeaderboard(showStartScreen)" style="flex:0 0 auto;padding:14px 16px;font-size:1.1rem;background:rgba(167,139,250,0.15);box-shadow:none;border:1px solid rgba(167,139,250,0.4)" title="Bestenliste">🏆</button>
+      </div>
     </div>
   `;
   overlay.style.display = 'flex';
@@ -1029,6 +1039,65 @@ function showStartScreen() {
   renderCharGrid(firstCat);
   if (state.playerAge) updateModeHint(state.playerAge);
   startBannerAnim();
+}
+
+// ─────────────────────────────────────────────
+//  BESTENLISTE (localStorage)
+// ─────────────────────────────────────────────
+function saveScore() {
+  const entry = {
+    name:  state.playerName,
+    char:  state.playerChar,
+    score: state.score,
+    level: state.level,
+    age:   state.playerAge,
+    date:  new Date().toLocaleDateString('de-DE'),
+  };
+  const board = JSON.parse(localStorage.getItem('wortschuss_scores') || '[]');
+  board.push(entry);
+  board.sort((a, b) => b.score - a.score);
+  board.splice(10);
+  localStorage.setItem('wortschuss_scores', JSON.stringify(board));
+}
+
+function getLeaderboard() {
+  return JSON.parse(localStorage.getItem('wortschuss_scores') || '[]');
+}
+
+function renderLeaderboardHTML() {
+  const board = getLeaderboard();
+  if (board.length === 0) {
+    return '<p style="color:#a78bfa;text-align:center;padding:12px">Noch keine Einträge! Spiel zuerst eine Runde. 🎮</p>';
+  }
+  const rows = board.map((e, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+    const highlight = i < 3 ? 'background:rgba(167,139,250,0.08);' : '';
+    return `<tr style="${highlight}">
+      <td style="padding:5px 8px;font-size:1rem">${medal}</td>
+      <td style="padding:5px 8px">${e.char} ${e.name}</td>
+      <td style="padding:5px 8px;color:#fbbf24;font-weight:bold;text-align:right">${e.score}</td>
+      <td style="padding:5px 8px;color:#c4b5fd;text-align:center">Lvl ${e.level}</td>
+      <td style="padding:5px 8px;color:#6b7280;font-size:0.78rem">${e.date}</td>
+    </tr>`;
+  }).join('');
+  return `<table style="width:100%;border-collapse:collapse;font-size:0.88rem;color:#e2e8f0">${rows}</table>`;
+}
+
+function showLeaderboard(backFn) {
+  const overlay = document.getElementById('overlay');
+  overlay.innerHTML = `
+    <div class="overlay-card" style="max-width:520px">
+      <h2>🏆 Bestenliste</h2>
+      <div style="width:100%;max-height:340px;overflow-y:auto;border-radius:12px;border:1px solid rgba(167,139,250,0.2);background:rgba(0,0,0,0.2);padding:4px">
+        ${renderLeaderboardHTML()}
+      </div>
+      <div style="display:flex;gap:12px;width:100%">
+        <button onclick="(${backFn.toString()})()" style="flex:1">← Zurück</button>
+        <button onclick="localStorage.removeItem('wortschuss_scores');showLeaderboard(${backFn.toString()})" style="flex:0 0 auto;padding:14px 18px;font-size:0.9rem;background:rgba(239,68,68,0.3);box-shadow:none;border:1px solid #f87171">🗑 Löschen</button>
+      </div>
+    </div>
+  `;
+  overlay.style.display = 'flex';
 }
 
 function quitGame() {
