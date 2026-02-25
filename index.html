@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wortschuss – Englisch lernen</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f0c29;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #star-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    h1, #hud, #subtitle, #word-display, canvas, #message {
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin: 12px 0 4px;
+      letter-spacing: 2px;
+      text-shadow: 0 0 20px #a78bfa;
+    }
+
+    #hud {
+      display: flex;
+      gap: 40px;
+      font-size: 1.2rem;
+      margin-bottom: 6px;
+    }
+
+    #hud span { color: #c4b5fd; }
+    #hud strong { color: #fff; }
+
+    #word-display {
+      font-size: 2.2rem;
+      font-weight: bold;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid #a78bfa;
+      border-radius: 16px;
+      padding: 10px 40px;
+      margin-bottom: 8px;
+      text-shadow: 0 0 12px #a78bfa;
+      min-width: 260px;
+      text-align: center;
+    }
+
+    #subtitle {
+      font-size: 0.9rem;
+      color: #c4b5fd;
+      margin-bottom: 6px;
+    }
+
+    canvas {
+      border: 2px solid rgba(167,139,250,0.4);
+      border-radius: 16px;
+      background: rgba(0,0,0,0.3);
+      cursor: crosshair;
+      display: block;
+    }
+
+    #message {
+      font-size: 1.5rem;
+      font-weight: bold;
+      height: 36px;
+      margin-top: 8px;
+      text-shadow: 0 0 10px currentColor;
+      transition: opacity 0.5s;
+    }
+
+    #message.correct { color: #4ade80; }
+    #message.wrong   { color: #f87171; }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,8,40,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      z-index: 10;
+      overflow-y: auto;
+      padding: 20px 0;
+    }
+
+    .overlay-card {
+      background: linear-gradient(160deg, rgba(124,58,237,0.18), rgba(30,27,75,0.7));
+      border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 24px;
+      padding: 28px 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 480px;
+      width: 95%;
+      box-shadow: 0 0 60px rgba(124,58,237,0.25);
+    }
+
+    #overlay h2 { font-size: 2.2rem; color: #a78bfa; margin: 0; text-align:center; }
+    #overlay p  { font-size: 1rem; color: #c4b5fd; margin: 0; text-align:center; }
+
+    button {
+      padding: 14px 40px;
+      font-size: 1.3rem;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 0 20px #a78bfa88;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px #a78bfa;
+    }
+
+    #lives-display { font-size: 1.4rem; letter-spacing: 4px; }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      width: 280px;
+    }
+    .input-group label { font-size: 0.95rem; color: #c4b5fd; font-weight: bold; }
+    .input-group input {
+      width: 100%;
+      padding: 10px 16px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: 2px solid #7c3aed;
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .input-group input:focus {
+      border-color: #a78bfa;
+      background: rgba(255,255,255,0.14);
+    }
+    #quit-btn {
+      padding: 6px 18px;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      background: rgba(239,68,68,0.2);
+      box-shadow: none;
+      border: 1px solid #f87171;
+      color: #f87171;
+    }
+    #quit-btn:hover { background: rgba(239,68,68,0.45); box-shadow: none; transform: none; }
+
+    #banner-canvas {
+      border-radius: 14px;
+      width: 100%;
+      max-width: 420px;
+      height: 110px;
+      display: block;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(167,139,250,0.25);
+    }
+    .char-picker {
+      width: 100%;
+    }
+    .char-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .char-tab {
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      border-radius: 20px;
+      border: 1px solid rgba(167,139,250,0.4);
+      background: rgba(255,255,255,0.05);
+      color: #c4b5fd;
+      cursor: pointer;
+      box-shadow: none;
+      transition: background 0.15s;
+    }
+    .char-tab:hover { background: rgba(167,139,250,0.2); transform: none; box-shadow: none; }
+    .char-tab.active { background: rgba(167,139,250,0.35); border-color: #a78bfa; color: #fff; }
+    .char-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      max-width: 400px;
+      max-height: 160px;
+      overflow-y: auto;
+      padding: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: #7c3aed transparent;
+    }
+    .char-btn {
+      font-size: 1.8rem;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      border: 2px solid transparent;
+      background: rgba(255,255,255,0.07);
+      cursor: pointer;
+      padding: 0;
+      transition: transform 0.15s, border 0.15s, background 0.15s;
+      box-shadow: none;
+      line-height: 1;
+    }
+    .char-btn:hover { transform: scale(1.2); background: rgba(167,139,250,0.2); box-shadow: none; }
+    .char-btn.selected {
+      border: 2px solid #a78bfa;
+      background: rgba(167,139,250,0.35);
+      box-shadow: 0 0 16px #a78bfa99;
+      transform: scale(1.18);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="star-canvas"></canvas>
+
+  <h1>🎯 Wortschuss</h1>
+  <div id="hud">
+    <div><span>Punkte: </span><strong id="score">0</strong></div>
+    <div id="lives-display">❤️❤️❤️</div>
+    <div><span>Level: </span><strong id="level">1</strong></div>
+    <div><span id="player-label" style="color:#c4b5fd"></span></div>
+    <button id="music-btn" onclick="toggleMusic()" style="padding:4px 14px;font-size:0.85rem;border-radius:8px;background:rgba(167,139,250,0.2);border:1px solid #a78bfa;color:#a78bfa;box-shadow:none">🎵 Musik: AN</button>
+    <button id="quit-btn" style="display:none" onclick="quitGame()">✖ Beenden</button>
+  </div>
+
+  <div id="subtitle">Welches englische Wort passt?</div>
+  <div id="word-display">–</div>
+
+  <canvas id="gameCanvas" width="700" height="420"></canvas>
+  <div id="message"></div>
+
+  <!-- Start-Overlay -->
+  <div id="overlay">
+    <div class="overlay-card">
+      <h2>🎯 Wortschuss</h2>
+      <p>Schieß auf die richtige <strong style="color:#4ade80">englische Übersetzung</strong>!</p>
+      <div class="input-group">
+        <label for="input-name">📝 Dein Name</label>
+        <input id="input-name" type="text" maxlength="20" placeholder="z.B. Max" autocomplete="off" />
+      </div>
+      <div class="input-group">
+        <label for="input-age">🎂 Dein Alter (3–65)</label>
+        <input id="input-age" type="number" min="3" max="65" placeholder="z.B. 10"
+          oninput="updateModeHint(this.value)" />
+      </div>
+      <p id="mode-hint" style="font-size:0.9rem;min-height:20px;text-align:center"></p>
+      <div class="char-picker" id="char-grid-init"></div>
+      <p id="input-error" style="color:#f87171;font-size:0.9rem;min-height:18px;text-align:center"></p>
+      <button id="startBtn" style="width:100%">Spiel starten ▶</button>
+    </div>
+  </div>
+
+<script>
+// ─────────────────────────────────────────────
+//  VOKABELLISTE (Deutsch → Englisch)
+//  → Hier können leicht neue Wörter hinzugefügt werden!
+// ─────────────────────────────────────────────
+const vocabulary = [
+  { de: "Hund",       en: "dog" },
+  { de: "Katze",      en: "cat" },
+  { de: "Haus",       en: "house" },
+  { de: "Baum",       en: "tree" },
+  { de: "Buch",       en: "book" },
+  { de: "Schule",     en: "school" },
+  { de: "Freund",     en: "friend" },
+  { de: "Wasser",     en: "water" },
+  { de: "Feuer",      en: "fire" },
+  { de: "Apfel",      en: "apple" },
+  { de: "Auto",       en: "car" },
+  { de: "Sonne",      en: "sun" },
+  { de: "Mond",       en: "moon" },
+  { de: "Kind",       en: "child" },
+  { de: "Stadt",      en: "city" },
+  { de: "Tier",       en: "animal" },
+  { de: "Blume",      en: "flower" },
+  { de: "Fenster",    en: "window" },
+  { de: "Himmel",     en: "sky" },
+  { de: "Meer",       en: "sea" },
+  { de: "Brücke",     en: "bridge" },
+  { de: "Tisch",      en: "table" },
+  { de: "Stuhl",      en: "chair" },
+  { de: "Schuh",      en: "shoe" },
+  { de: "Hand",       en: "hand" },
+  { de: "Auge",       en: "eye" },
+  { de: "Herz",       en: "heart" },
+  { de: "Brot",       en: "bread" },
+  { de: "Milch",      en: "milk" },
+  { de: "Zeit",       en: "time" },
+];
+
+// Einfache Wörter für Kinder unter 10 Jahre
+// Einfach: 6–9 Jahre
+const vocabularyEasy = [
+  { de: "Hund",    en: "dog" },
+  { de: "Katze",   en: "cat" },
+  { de: "Ball",    en: "ball" },
+  { de: "Rot",     en: "red" },
+  { de: "Blau",    en: "blue" },
+  { de: "Grün",    en: "green" },
+  { de: "Apfel",   en: "apple" },
+  { de: "Ei",      en: "egg" },
+  { de: "Nase",    en: "nose" },
+  { de: "Mund",    en: "mouth" },
+  { de: "Ohr",     en: "ear" },
+  { de: "Arm",     en: "arm" },
+  { de: "Bein",    en: "leg" },
+  { de: "Fisch",   en: "fish" },
+  { de: "Vogel",   en: "bird" },
+  { de: "Groß",    en: "big" },
+  { de: "Klein",   en: "small" },
+  { de: "Ja",      en: "yes" },
+  { de: "Nein",    en: "no" },
+  { de: "Hallo",   en: "hello" },
+];
+
+// Sehr einfach: 3–5 Jahre
+const vocabularyVeryEasy = [
+  { de: "Hund",   en: "dog" },
+  { de: "Katze",  en: "cat" },
+  { de: "Ball",   en: "ball" },
+  { de: "Rot",    en: "red" },
+  { de: "Blau",   en: "blue" },
+  { de: "Nase",   en: "nose" },
+  { de: "Auge",   en: "eye" },
+  { de: "Ja",     en: "yes" },
+  { de: "Nein",   en: "no" },
+  { de: "Hallo",  en: "hello" },
+];
+
+// ─────────────────────────────────────────────
+//  SPIELEINSTELLUNGEN
+// ─────────────────────────────────────────────
+const MAX_LIVES    = 3;
+const BOX_COUNT    = 4;   // Anzahl der Boxen gleichzeitig
+const BALL_SPEED   = 7;   // Grundgeschwindigkeit
+
+// ─────────────────────────────────────────────
+//  CANVAS & ZUSTAND
+// ─────────────────────────────────────────────
+const canvas  = document.getElementById('gameCanvas');
+const ctx     = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let state = {
+  score: 0,
+  lives: MAX_LIVES,
+  maxLives: MAX_LIVES,
+  level: 1,
+  leveledUp: false,
+  playerName: '',
+  playerAge: '',
+  playerChar: '🧑',
+  activeVocabulary: vocabulary,
+  currentWord: null,
+  boxes: [],
+  ball: null,
+  canShoot: true,
+  mouseX: W / 2,
+  mouseY: H / 2,
+  gameRunning: false,
+  usedWords: new Set(),
+  frameId: null,
+};
+
+// ─────────────────────────────────────────────
+//  HILFSFUNKTIONEN
+// ─────────────────────────────────────────────
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+function getDistractors(correct, count) {
+  const pool = state.activeVocabulary.filter(v => v.en !== correct.en);
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map(v => v.en);
+}
+
+const BOX_W = 130, BOX_H = 50;
+const COLORS = ['#7c3aed','#0ea5e9','#f59e0b','#10b981','#ef4444','#ec4899'];
+
+function createBoxes(correctWord) {
+  const distractors = getDistractors(correctWord, BOX_COUNT - 1);
+  const words = [correctWord.en, ...distractors].sort(() => Math.random() - 0.5);
+  const speed = 1.5 + state.level * 0.3;
+
+  return words.map((word, i) => {
+    const color = COLORS[i % COLORS.length];
+    const x = rand(BOX_W / 2 + 10, W - BOX_W / 2 - 10);
+    const y = rand(60, H - BOX_H - 80);
+    const angle = rand(0, Math.PI * 2);
+    return {
+      word,
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color,
+      isCorrect: word === correctWord.en,
+      hit: false,
+      hitTimer: 0,
+    };
+  });
+}
+
+const WORDS_PER_LEVEL = 10; // Alle 10 Wörter = neues Level
+
+function pickNewWord() {
+  // Level-Aufstieg alle 10 Wörter
+  if (state.usedWords.size > 0 && state.usedWords.size % WORDS_PER_LEVEL === 0) {
+    // Nur hochzählen wenn wir gerade ein neues Level erreichen
+    if (!state.leveledUp) {
+      state.leveledUp = true;
+      state.level++;
+      document.getElementById('level').textContent = state.level;
+      showMessage('🎉 Level ' + state.level + '!', 'correct');
+    }
+  } else {
+    state.leveledUp = false;
+  }
+  // Alle Wörter durch? Zurücksetzen
+  if (state.usedWords.size >= state.activeVocabulary.length) {
+    state.usedWords.clear();
+  }
+  const available = state.activeVocabulary.filter(v => !state.usedWords.has(v.de));
+  const word = available[randInt(0, available.length - 1)];
+  state.usedWords.add(word.de);
+  return word;
+}
+
+function updateLivesDisplay() {
+  const el = document.getElementById('lives-display');
+  el.textContent = '❤️'.repeat(state.lives) + '🖤'.repeat(state.maxLives - state.lives);
+}
+
+function getpraiseMessage() {
+  const age = parseInt(state.playerAge);
+  if (age < 6) {
+    const praise = [
+      '⭐ Super!', '🎉 Juhu!', '🌟 Toll!', '🥳 Yay!',
+      '🐸 Wow!', '🌈 Prima!', '🎠 Doll!', '🦄 Spitze!',
+    ];
+    return praise[Math.floor(Math.random() * praise.length)];
+  }
+  if (age < 10) {
+    const praise = [
+      '🌟 Super!', '🎉 Toll!', '⭐ Spitze!', '🥳 Juhu!',
+      '💪 Stark!', '🦸 Klasse!', '🎈 Wow!', '🏆 Doll!',
+      '😄 Supa!', '🐸 Yay!', '🌈 Prima!', '🚀 Mega!',
+    ];
+    return praise[Math.floor(Math.random() * praise.length)];
+  }
+  return '✅ Richtig!';
+}
+
+function showMessage(text, type) {
+  const el = document.getElementById('message');
+  el.textContent = text;
+  el.className = type;
+  // Für Kinder unter 10: größere Schrift und länger sichtbar
+  const age = parseInt(state.playerAge);
+  el.style.fontSize = age < 6 ? '2.6rem' : age < 10 ? '2rem' : '1.5rem';
+  const duration = age < 6 ? 2200 : age < 10 ? 1800 : 1200;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.textContent = ''; el.className = ''; el.style.fontSize = ''; }, duration);
+}
+
+// ─────────────────────────────────────────────
+//  ZEICHENFUNKTIONEN
+// ─────────────────────────────────────────────
+function drawBox(box) {
+  const x = box.x - BOX_W / 2, y = box.y - BOX_H / 2;
+
+  // ── ZERREISS-Animation für falsche Box ──
+  if (box.hit && box.hitType === 'wrong') {
+    const t = box.hitTimer / 25; // 0 → 1
+    const flyDist = t * 55;
+    const alpha = 1 - t;
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = '#f87171';
+    ctx.shadowBlur = 18;
+
+    // Obere Hälfte → fliegt nach oben-links
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x - 4, y, BOX_W + 8, BOX_H / 2);
+    ctx.clip();
+    ctx.translate(-flyDist * 0.3, -flyDist);
+    ctx.fillStyle = box.color + 'cc';
+    ctx.beginPath();
+    ctx.roundRect(x, y, BOX_W, BOX_H, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(box.word, box.x, box.y);
+    ctx.restore();
+
+    // Trennlinie (Riss)
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, box.y);
+    ctx.lineTo(x + BOX_W, box.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Untere Hälfte → fliegt nach unten-rechts
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x - 4, box.y, BOX_W + 8, BOX_H / 2 + 4);
+    ctx.clip();
+    ctx.translate(flyDist * 0.3, flyDist);
+    ctx.fillStyle = box.color + 'cc';
+    ctx.beginPath();
+    ctx.roundRect(x, y, BOX_W, BOX_H, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(box.word, box.x, box.y);
+    ctx.restore();
+
+    ctx.restore();
+    return;
+  }
+
+  // ── NORMAL / RICHTIG-Animation ──
+  ctx.save();
+  if (box.hit && box.hitType === 'correct') {
+    ctx.globalAlpha = 1 - box.hitTimer / 20;
+    const scale = 1 + box.hitTimer / 20 * 0.4;
+    ctx.translate(box.x, box.y);
+    ctx.scale(scale, scale);
+    ctx.translate(-box.x, -box.y);
+  }
+
+  ctx.shadowColor = box.color;
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = box.hit ? '#4ade80cc' : box.color + 'cc';
+  ctx.beginPath();
+  ctx.roundRect(x, y, BOX_W, BOX_H, 10);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(box.word, box.x, box.y);
+  ctx.restore();
+}
+
+function drawCannon() {
+  const cx = W / 2, cy = H - 20;
+  const angle = Math.atan2(state.mouseY - cy, state.mouseX - cx);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  // Kanonen-Rohr
+  ctx.fillStyle = '#a78bfa';
+  ctx.shadowColor = '#7c3aed';
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.roundRect(0, -10, 50, 20, 6);
+  ctx.fill();
+
+  // Kanonen-Basis
+  ctx.rotate(-angle);
+  ctx.fillStyle = '#7c3aed';
+  ctx.beginPath();
+  ctx.arc(0, 0, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#c4b5fd';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Charakter-Emoji über der Kanone
+  ctx.shadowBlur = 0;
+  ctx.font = '22px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(state.playerChar, 0, -24);
+
+  ctx.restore();
+}
+
+function drawBall(ball) {
+  if (!ball) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, 12, 0, Math.PI * 2);
+  ctx.fillStyle = '#fbbf24';
+  ctx.shadowColor = '#fbbf24';
+  ctx.shadowBlur = 20;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAimLine() {
+  if (!state.canShoot) return;
+  const cx = W / 2, cy = H - 20;
+  const angle = Math.atan2(state.mouseY - cy, state.mouseX - cx);
+
+  ctx.save();
+  ctx.setLineDash([8, 8]);
+  ctx.strokeStyle = 'rgba(167,139,250,0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(angle) * 55, cy + Math.sin(angle) * 55);
+  ctx.lineTo(cx + Math.cos(angle) * 180, cy + Math.sin(angle) * 180);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────────
+//  SPIELLOGIK / GAME LOOP
+// ─────────────────────────────────────────────
+function startRound() {
+  state.currentWord = pickNewWord();
+  document.getElementById('word-display').textContent = state.currentWord.de;
+  state.boxes = createBoxes(state.currentWord);
+  state.ball = null;
+  state.canShoot = true;
+}
+
+function shoot() {
+  if (!state.canShoot || !state.gameRunning) return;
+  const cx = W / 2, cy = H - 20;
+  const dx = state.mouseX - cx, dy = state.mouseY - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  state.ball = {
+    x: cx,
+    y: cy,
+    vx: (dx / dist) * BALL_SPEED,
+    vy: (dy / dist) * BALL_SPEED,
+  };
+  state.canShoot = false;
+}
+
+function update() {
+  // Boxen bewegen
+  for (const box of state.boxes) {
+    if (box.hit) {
+      const maxTimer = box.hitType === 'wrong' ? 25 : 20;
+      if (box.hitTimer < maxTimer) box.hitTimer++;
+      continue;
+    }
+    box.x += box.vx;
+    box.y += box.vy;
+    // Wände
+    if (box.x - BOX_W / 2 < 0 || box.x + BOX_W / 2 > W) box.vx *= -1;
+    if (box.y - BOX_H / 2 < 0 || box.y + BOX_H / 2 > H - 50) box.vy *= -1;
+  }
+
+  // Ball bewegen
+  if (state.ball) {
+    state.ball.x += state.ball.vx;
+    state.ball.y += state.ball.vy;
+
+    // Ball verlässt Canvas → daneben geschossen
+    if (
+      state.ball.x < -20 || state.ball.x > W + 20 ||
+      state.ball.y < -20 || state.ball.y > H + 20
+    ) {
+      state.ball = null;
+      state.canShoot = true;
+      showMessage('😅 Daneben! Nochmal!', 'wrong');
+      return; // Kollisionsprüfung überspringen
+    }
+
+    // Kollision mit Boxen
+    for (const box of state.boxes) {
+      if (!state.ball) break; // Ball bereits weg
+      if (box.hit) continue;
+      const b = state.ball;
+      if (
+        b.x > box.x - BOX_W / 2 - 12 && b.x < box.x + BOX_W / 2 + 12 &&
+        b.y > box.y - BOX_H / 2 - 12 && b.y < box.y + BOX_H / 2 + 12
+      ) {
+        box.hit = true;
+        box.hitType = box.isCorrect ? 'correct' : 'wrong';
+        state.ball = null;
+
+        if (box.isCorrect) {
+          state.score += 10 * state.level;
+          document.getElementById('score').textContent = state.score;
+          showMessage(getpraiseMessage() + ' +' + (10 * state.level), 'correct');
+          setTimeout(() => startRound(), 900);
+        } else {
+          state.lives--;
+          updateLivesDisplay();
+          showMessage('❌ Falsch!', 'wrong');
+          if (state.lives <= 0) {
+            setTimeout(() => gameOver(), 800);
+          } else {
+            setTimeout(() => { state.canShoot = true; }, 600);
+          }
+        }
+        break;
+      }
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawAimLine();
+  for (const box of state.boxes) drawBox(box);
+  drawCannon();
+  drawBall(state.ball);
+}
+
+function gameLoop() {
+  if (!state.gameRunning) return;
+  update();
+  draw();
+  state.frameId = requestAnimationFrame(gameLoop);
+}
+
+// ─────────────────────────────────────────────
+//  GAME OVER / START
+// ─────────────────────────────────────────────
+function gameOver() {
+  state.gameRunning = false;
+  cancelAnimationFrame(state.frameId);
+  stopMusic();
+  document.getElementById('quit-btn').style.display = 'none';
+  const overlay = document.getElementById('overlay');
+  overlay.innerHTML = `
+    <div class="overlay-card">
+      <h2>🎮 Spiel vorbei, ${state.playerName}!</h2>
+      <p>Dein Ergebnis: <strong style="color:#fbbf24;font-size:1.8rem">${state.score}</strong> Punkte</p>
+      <p>Alter: ${state.playerAge} | Level erreicht: ${state.level}</p>
+      <p style="font-size:1.3rem">${state.score >= 100 ? '🏆 Fantastisch!' : state.score >= 50 ? '👍 Gut gemacht!' : '💪 Weiter üben!'}</p>
+      <button id="startBtn" style="width:100%">Nochmal spielen 🔄</button>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+  document.getElementById('startBtn').onclick = showStartScreen;
+}
+
+function startGame() {
+  // Name & Alter prüfen (nur auf dem echten Startformular)
+  const nameInput = document.getElementById('input-name');
+  const ageInput  = document.getElementById('input-age');
+  const errEl     = document.getElementById('input-error');
+  if (nameInput && ageInput) {
+    const name = nameInput.value.trim();
+    const age  = parseInt(ageInput.value);
+    if (!name) { if (errEl) errEl.textContent = 'Bitte gib deinen Namen ein!'; return; }
+    if (!age || age < 3 || age > 65) { if (errEl) errEl.textContent = 'Alter muss zwischen 3 und 65 sein!'; return; }
+    state.playerName = name;
+    state.playerAge  = age;
+    state.activeVocabulary = age < 6 ? vocabularyVeryEasy : age < 10 ? vocabularyEasy : vocabulary;
+    state.maxLives = age < 6 ? 10 : age < 10 ? 5 : 3;
+    const selChar = document.querySelector('.char-btn.selected');
+    if (selChar) state.playerChar = selChar.textContent;
+  }
+  document.getElementById('quit-btn').style.display = 'inline-block';
+  document.getElementById('player-label').textContent = state.playerChar + ' ' + state.playerName + ' (' + state.playerAge + ')';
+  document.getElementById('overlay').style.display = 'none';
+  state.score = 0;
+  state.lives = state.maxLives;
+  state.level = 1;
+  state.leveledUp = false;
+  state.usedWords.clear();
+  state.gameRunning = true;
+  document.getElementById('score').textContent = '0';
+  document.getElementById('level').textContent = '1';
+  updateLivesDisplay();
+  startMusic();
+  startRound();
+  gameLoop();
+}
+
+// ─────────────────────────────────────────────
+//  EVENTS
+// ─────────────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  state.mouseX = e.clientX - rect.left;
+  state.mouseY = e.clientY - rect.top;
+});
+
+canvas.addEventListener('click', shoot);
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches[0];
+  state.mouseX = t.clientX - rect.left;
+  state.mouseY = t.clientY - rect.top;
+  shoot();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const t = e.touches[0];
+  state.mouseX = t.clientX - rect.left;
+  state.mouseY = t.clientY - rect.top;
+}, { passive: false });
+
+// showStartScreen() wird unten aufgerufen, nachdem CHAR_CATEGORIES definiert ist
+
+const CHAR_CATEGORIES = {
+  '👤 Menschen': ['🧑','👦','👧','👨','👩','🧓','👶','🧑‍🎓','🧑‍🚀','🧙','🧞','🦸','🦹','💂','👷'],
+  '🐾 Tiere':   ['🦊','🐱','🐶','🦁','🐸','🐧','🐷','🐮','🐢','🐧','🦋','🐻','🐼','🐯','🦓','🦍','🐙','🦀','🐢','🐦','🦜'],
+  '✨ Fantasy':  ['🦄','🐉','🦖','🦕','🧙','🧟','🧙‍♀️','👻','👽','🦖','👾','🐲','⚙️🤖'],
+  '🤖 Fun':     ['🤖','👾','👻','👼','☂️','🎃','🦧','🌵','🦄','🦴','🌈','🚀','🌟','🎮'],
+};
+
+const CHARACTERS = Object.values(CHAR_CATEGORIES).flat();
+
+function renderCharGrid(activeCategory) {
+  const cats = Object.keys(CHAR_CATEGORIES);
+  const tabs = cats.map(cat =>
+    `<button class="char-tab${cat === activeCategory ? ' active' : ''}" onclick="renderCharGrid('${cat}')">${cat}</button>`
+  ).join('');
+  const chars = CHAR_CATEGORIES[activeCategory];
+  const btns = chars.map(c =>
+    `<button class="char-btn${c === state.playerChar ? ' selected' : ''}" onclick="selectChar(this)">${c}</button>`
+  ).join('');
+  const picker = document.getElementById('char-picker');
+  if (!picker) return;
+  picker.innerHTML = `
+    <div class="char-tabs">${tabs}</div>
+    <div class="char-grid">${btns}</div>
+  `;
+}
+
+function selectChar(el) {
+  document.querySelectorAll('.char-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ─────────────────────────────────────────────
+//  HINTERGRUNDMUSIK (Web Audio API)
+// ─────────────────────────────────────────────
+let audioCtx = null;
+let musicNodes = [];
+let musicOn = true;
+let musicScheduled = false;
+
+// Melodie: Noten als Frequenzen (fröhliche Schleife)
+// Zweistimmig: Melodie + Bass
+const MELODY = [
+  [659.25, 164.81], [783.99, 164.81], [880.00, 196.00], [783.99, 196.00],
+  [659.25, 164.81], [523.25, 130.81], [587.33, 146.83], [659.25, 164.81],
+  [698.46, 174.61], [783.99, 196.00], [880.00, 220.00], [987.77, 220.00],
+  [880.00, 196.00], [783.99, 174.61], [659.25, 164.81], [523.25, 130.81],
+];
+const NOTE_DUR = 0.28; // Sekunden pro Note
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playMelodyLoop() {
+  if (!musicOn || !audioCtx) return;
+  musicNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  musicNodes = [];
+  musicScheduled = true;
+
+  const loopDur = MELODY.length * NOTE_DUR;
+  const startTime = audioCtx.currentTime + 0.05;
+
+  // Reverb/Kompressor für wärmeren Sound
+  const compressor = audioCtx.createDynamicsCompressor();
+  compressor.connect(audioCtx.destination);
+
+  MELODY.forEach(([freq, bass], i) => {
+    const t = startTime + i * NOTE_DUR;
+
+    // Melodie (Triangle – warm & klar)
+    const oscM  = audioCtx.createOscillator();
+    const gainM = audioCtx.createGain();
+    oscM.type = 'triangle';
+    oscM.frequency.value = freq;
+    gainM.gain.setValueAtTime(0, t);
+    gainM.gain.linearRampToValueAtTime(0.13, t + 0.02);
+    gainM.gain.linearRampToValueAtTime(0.09, t + NOTE_DUR * 0.5);
+    gainM.gain.linearRampToValueAtTime(0, t + NOTE_DUR - 0.04);
+    oscM.connect(gainM);
+    gainM.connect(compressor);
+    oscM.start(t);
+    oscM.stop(t + NOTE_DUR);
+    musicNodes.push(oscM);
+
+    // Bass (Sine – tief & weich)
+    const oscB  = audioCtx.createOscillator();
+    const gainB = audioCtx.createGain();
+    oscB.type = 'sine';
+    oscB.frequency.value = bass;
+    gainB.gain.setValueAtTime(0, t);
+    gainB.gain.linearRampToValueAtTime(0.10, t + 0.03);
+    gainB.gain.linearRampToValueAtTime(0, t + NOTE_DUR - 0.06);
+    oscB.connect(gainB);
+    gainB.connect(compressor);
+    oscB.start(t);
+    oscB.stop(t + NOTE_DUR);
+    musicNodes.push(oscB);
+  });
+
+  setTimeout(() => { if (musicOn && musicScheduled) playMelodyLoop(); }, loopDur * 1000);
+}
+
+function startMusic() {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  musicOn = true;
+  playMelodyLoop();
+  document.getElementById('music-btn').textContent = '🎵 Musik: AN';
+}
+
+function stopMusic() {
+  musicScheduled = false;
+  musicNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  musicNodes = [];
+}
+
+function toggleMusic() {
+  if (musicOn) {
+    musicOn = false;
+    stopMusic();
+    document.getElementById('music-btn').textContent = '🔇 Musik: AUS';
+  } else {
+    startMusic();
+  }
+}
+
+function updateModeHint(val) {
+  const el = document.getElementById('mode-hint');
+  if (!el) return;
+  const age = parseInt(val);
+  if (!age || age < 3) { el.textContent = ''; return; }
+  if (age > 65) {
+    el.style.color = '#f87171';
+    el.textContent = '❌ Leider nur bis 65 Jahre spielbar!';
+    return;
+  }
+  if (age < 6) {
+    el.style.color = '#fb923c';
+    el.textContent = '🟠 Mini-Modus – 10 super einfache Wörter für dich!';
+  } else if (age < 10) {
+    el.style.color = '#4ade80';
+    el.textContent = '🟢 Einfacher Modus – 20 leichte Wörter!';
+  } else {
+    el.style.color = '#c4b5fd';
+    el.textContent = '🟣 Normaler Modus – 30 Vokabeln';
+  }
+}
+
+function showStartScreen() {
+  const firstCat = Object.keys(CHAR_CATEGORIES)[0];
+  const overlay = document.getElementById('overlay');
+  overlay.innerHTML = `
+    <div class="overlay-card">
+      <canvas id="banner-canvas"></canvas>
+      <h2>🎯 Wortschuss</h2>
+      <p>Schieß auf die richtige <strong style="color:#4ade80">englische Übersetzung</strong>!</p>
+
+      <div class="input-group">
+        <label for="input-name">📝 Dein Name</label>
+        <input id="input-name" type="text" maxlength="20" placeholder="z.B. Max" autocomplete="off" value="${state.playerName}" />
+      </div>
+      <div class="input-group">
+        <label for="input-age">🎂 Dein Alter (3–65)</label>
+        <input id="input-age" type="number" min="3" max="65" placeholder="z.B. 10" value="${state.playerAge}"
+          oninput="updateModeHint(this.value)" />
+      </div>
+      <p id="mode-hint" style="font-size:0.9rem;min-height:20px;text-align:center"></p>
+
+      <div class="char-picker" id="char-picker"></div>
+
+      <p id="input-error" style="color:#f87171;font-size:0.9rem;min-height:18px;text-align:center"></p>
+      <button id="startBtn" style="width:100%">Spiel starten ▶</button>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+  document.getElementById('startBtn').onclick = startGame;
+  renderCharGrid(firstCat);
+  if (state.playerAge) updateModeHint(state.playerAge);
+  startBannerAnim();
+}
+
+function quitGame() {
+  if (!confirm('Spiel wirklich beenden?')) return;
+  state.gameRunning = false;
+  cancelAnimationFrame(state.frameId);
+  stopMusic();
+  document.getElementById('quit-btn').style.display = 'none';
+  const overlay = document.getElementById('overlay');
+  overlay.innerHTML = `
+    <div class="overlay-card">
+      <h2>👋 Tschüss, ${state.playerName}!</h2>
+      <p>Du hast <strong style="color:#fbbf24;font-size:1.5rem">${state.score}</strong> Punkte erreicht.</p>
+      <p>Level: ${state.level}</p>
+      <button id="startBtn" style="width:100%">Nochmal spielen 🔄</button>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+  document.getElementById('startBtn').onclick = showStartScreen;
+}
+
+// ─────────────────────────────────────────────
+//  STERNE-HINTERGRUND
+// ─────────────────────────────────────────────
+(function initStars() {
+  const sc = document.getElementById('star-canvas');
+  sc.width  = window.innerWidth;
+  sc.height = window.innerHeight;
+  const sx = sc.getContext('2d');
+  window.addEventListener('resize', () => {
+    sc.width  = window.innerWidth;
+    sc.height = window.innerHeight;
+  });
+
+  const stars = Array.from({length: 120}, () => ({
+    x: Math.random() * sc.width,
+    y: Math.random() * sc.height,
+    r: Math.random() * 1.5 + 0.3,
+    a: Math.random(),
+    da: (Math.random() * 0.008 + 0.002) * (Math.random() < 0.5 ? 1 : -1),
+    speed: Math.random() * 0.15 + 0.03,
+  }));
+
+  function drawStars() {
+    sx.clearRect(0, 0, sc.width, sc.height);
+    for (const s of stars) {
+      s.a += s.da;
+      if (s.a > 1 || s.a < 0) s.da *= -1;
+      s.y -= s.speed;
+      if (s.y < 0) { s.y = sc.height; s.x = Math.random() * sc.width; }
+      sx.beginPath();
+      sx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      sx.fillStyle = `rgba(196,181,253,${Math.max(0,Math.min(1,s.a)).toFixed(2)})`;
+      sx.fill();
+    }
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+}());
+
+// ─────────────────────────────────────────────
+//  BANNER-ANIMATION (Startkarte)
+// ─────────────────────────────────────────────
+let bannerFrameId = null;
+
+function startBannerAnim() {
+  if (bannerFrameId) cancelAnimationFrame(bannerFrameId);
+  const bc = document.getElementById('banner-canvas');
+  if (!bc) return;
+  bc.width  = bc.offsetWidth  || 420;
+  bc.height = bc.offsetHeight || 110;
+  const bx = bc.getContext('2d');
+  const BW = bc.width, BH = bc.height;
+
+  const bboxes = [
+    { x: BW*0.20, y: BH*0.35, vx: 1.1, vy: 0.7, w: 76, h: 30, color: '#7c3aed', word: 'dog' },
+    { x: BW*0.52, y: BH*0.55, vx:-0.9, vy: 1.0, w: 76, h: 30, color: '#0ea5e9', word: 'cat' },
+    { x: BW*0.76, y: BH*0.25, vx: 1.2, vy:-0.9, w: 76, h: 30, color: '#f59e0b', word: 'house' },
+  ];
+
+  const ball = { x: BW/2, y: BH - 14, r: 8, vx: 2.4, vy: -2.8 };
+  let tick = 0;
+
+  function drawBanner() {
+    if (!document.getElementById('banner-canvas')) {
+      cancelAnimationFrame(bannerFrameId);
+      return;
+    }
+    bx.clearRect(0, 0, BW, BH);
+    tick++;
+
+    // Hintergrund
+    bx.fillStyle = 'rgba(15,12,41,0.55)';
+    bx.fillRect(0, 0, BW, BH);
+
+    // Kleine Sternchen
+    for (let i = 0; i < 20; i++) {
+      const stx = ((i * 71 + tick * 0.25) % BW);
+      const sty = ((i * 43 + tick * 0.12) % BH);
+      bx.beginPath();
+      bx.arc(stx, sty, 0.8, 0, Math.PI*2);
+      bx.fillStyle = 'rgba(200,185,255,0.45)';
+      bx.fill();
+    }
+
+    // Boxen
+    for (const b of bboxes) {
+      b.x += b.vx; b.y += b.vy;
+      if (b.x - b.w/2 < 2 || b.x + b.w/2 > BW - 2) b.vx *= -1;
+      if (b.y - b.h/2 < 2 || b.y + b.h/2 > BH - 14) b.vy *= -1;
+      bx.save();
+      bx.shadowColor = b.color; bx.shadowBlur = 12;
+      bx.fillStyle = b.color + 'bb';
+      bx.beginPath();
+      bx.roundRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h, 8);
+      bx.fill();
+      bx.strokeStyle = 'rgba(255,255,255,0.5)'; bx.lineWidth = 1.5; bx.stroke();
+      bx.shadowBlur = 0;
+      bx.fillStyle = '#fff';
+      bx.font = 'bold 13px Segoe UI, sans-serif';
+      bx.textAlign = 'center'; bx.textBaseline = 'middle';
+      bx.fillText(b.word, b.x, b.y);
+      bx.restore();
+    }
+
+    // Ball
+    ball.x += ball.vx; ball.y += ball.vy;
+    if (ball.x < ball.r || ball.x > BW - ball.r) ball.vx *= -1;
+    if (ball.y < ball.r) ball.vy *= -1;
+    if (ball.y > BH + 20) { ball.x = BW/2; ball.y = BH - 14; ball.vy = -2.8; }
+    bx.save();
+    bx.beginPath();
+    bx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+    bx.fillStyle = '#fbbf24';
+    bx.shadowColor = '#fbbf24'; bx.shadowBlur = 16;
+    bx.fill();
+    bx.restore();
+
+    // Kanone unten-Mitte
+    const cx = BW / 2, cy = BH - 6;
+    const ang = Math.atan2(ball.y - cy, ball.x - cx);
+    bx.save();
+    bx.translate(cx, cy);
+    bx.rotate(ang);
+    bx.fillStyle = '#a78bfa';
+    bx.shadowColor = '#7c3aed'; bx.shadowBlur = 10;
+    bx.beginPath();
+    bx.roundRect(0, -5, 28, 10, 4);
+    bx.fill();
+    bx.restore();
+    bx.save();
+    bx.translate(cx, cy);
+    bx.fillStyle = '#7c3aed';
+    bx.beginPath();
+    bx.arc(0, 0, 12, 0, Math.PI*2);
+    bx.fill();
+    bx.strokeStyle = '#c4b5fd'; bx.lineWidth = 1.5; bx.stroke();
+    bx.shadowBlur = 0;
+    bx.font = '14px serif';
+    bx.textAlign = 'center'; bx.textBaseline = 'bottom';
+    bx.fillText(state.playerChar || '🧑', 0, -14);
+    bx.restore();
+
+    bannerFrameId = requestAnimationFrame(drawBanner);
+  }
+  drawBanner();
+}
+
+// Startbildschirm aufrufen – alle Funktionen und Variablen sind jetzt definiert
+showStartScreen();
+</script>
+</body>
+</html>
